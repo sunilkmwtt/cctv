@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+secrets
+backups
+recordings
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.venv
+venv
+*.mkv
+*.mp4
+*.log

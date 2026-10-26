@@ -1,0 +1,46 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/README.md
+!secrets/mediamtx.env.example
+*.pem
+*.key
+camera.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Local data - never commit video or databases
+*.sqlite3
+*.db
+/pgdata/
+/postgres-data/
+/recordings/
+/playback-cache/
+/cache/
+/staticfiles/
+/backups/
+*.mkv
+*.mp4
+*.ts
+*.m4s
+*.dump
+*.sql.gz
+
+# Logs and editor noise
+*.log
+/logs/
+.idea/
+.vscode/
+.DS_Store
+.dev/

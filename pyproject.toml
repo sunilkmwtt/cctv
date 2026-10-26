@@ -1,0 +1,14 @@
+[project]
+name = "home-cctv"
+version = "1.0.0"
+description = "Lightweight CCTV dashboard for a home Ubuntu server"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers -p no:cacheprovider"
+markers = [
+    "ffmpeg: requires ffmpeg/ffprobe binaries",
+]
