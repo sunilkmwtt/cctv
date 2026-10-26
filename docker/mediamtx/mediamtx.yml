@@ -1,0 +1,69 @@
+# MediaMTX configuration for home-cctv (committed; contains NO credentials).
+# Camera source URLs are injected from the untracked secrets/mediamtx.env as
+#   MTX_PATHS_<PATH>_SOURCE=rtsp://user:pass@camera:port/path
+# Path names must be lowercase letters/digits only (no '_' or '-'), matching Camera.stream_path.
+
+logLevel: info
+logDestinations: [stdout]
+readTimeout: 10s
+writeTimeout: 10s
+
+# Only containers on the private Docker network can reach MediaMTX; nothing but the
+# localhost-bound RTSP port is published. Browsers go through nginx + Django auth.
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.1/32", "::1/128"]
+    permissions:
+      - action: read
+        path:
+  - user: any
+    pass:
+    ips: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.1/32", "::1/128"]
+    permissions:
+      - action: api
+
+# API is used by Django for camera status. It exposes source URLs (credentials!),
+# so it must never be published or proxied.
+api: true
+apiAddress: :9997
+
+metrics: false
+pprof: false
+playback: false
+rtmp: false
+srt: false
+moq: false
+# WebRTC can be enabled later (needs UDP port publishing and ICE configuration).
+webrtc: false
+
+rtsp: true
+rtspTransports: [tcp]
+rtspAddress: :8554
+
+hls: true
+hlsAddress: :8888
+hlsAllowOrigins: []
+hlsTrustedProxies: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+hlsAlwaysRemux: false
+# Standard (non-low-latency) HLS: far fewer requests per viewer, each one auth-checked.
+hlsVariant: fmp4
+hlsSegmentCount: 6
+hlsSegmentDuration: 2s
+hlsSegmentMaxSize: 50M
+hlsMuxerCloseAfter: 60s
+
+pathDefaults:
+  # Pull from the camera only while someone is watching: no extra load on the phone
+  # or the server when nobody looks at the live view.
+  sourceOnDemand: true
+  sourceOnDemandStartTimeout: 15s
+  sourceOnDemandCloseAfter: 30s
+  rtspTransport: tcp
+
+paths:
+  # Main Entrance (Camera.stream_path = "entrance").
+  # Real source comes from MTX_PATHS_ENTRANCE_SOURCE in secrets/mediamtx.env.
+  entrance:
+    source: rtsp://unset.invalid:8554/configure-secrets-mediamtx-env

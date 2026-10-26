@@ -1,0 +1,18 @@
+# Development only: a fake RTSP camera (test pattern + tone, H.264/AAC) at rtsp://fakecam:8554/live
+logLevel: warn
+api: false
+hls: false
+rtmp: false
+srt: false
+moq: false
+webrtc: false
+rtspTransports: [tcp]
+paths:
+  live:
+    runOnInit: >-
+      ffmpeg -hide_banner -loglevel error -re
+      -f lavfi -i testsrc2=size=640x360:rate=15
+      -f lavfi -i sine=frequency=440:sample_rate=48000
+      -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -pix_fmt yuv420p -b:v 600k
+      -c:a aac -b:a 64k -f rtsp -rtsp_transport tcp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+    runOnInitRestart: yes

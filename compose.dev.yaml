@@ -1,0 +1,16 @@
+# Development override: adds a fake RTSP camera and points MediaMTX at it.
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+# Never use on the real server (it would not touch the recorder, but it replaces the live source).
+services:
+  fakecam:
+    image: bluenviron/mediamtx:1.21.3-ffmpeg
+    volumes:
+      - ./docker/fakecam/mediamtx.yml:/mediamtx.yml:ro
+    networks: [frontend]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 256M }
+
+  mediamtx:
+    environment:
+      MTX_PATHS_ENTRANCE_SOURCE: rtsp://fakecam:8554/live
