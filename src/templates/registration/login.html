@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="login-card card">
+  <h1><span class="brand-dot" aria-hidden="true"></span> Home CCTV</h1>
+  <p class="muted">Sign in to view cameras and recordings.</p>
+  {% if form.errors %}
+    <p class="alert" role="alert">Incorrect username or password.</p>
+  {% endif %}
+  <form method="post" action="{% url 'login' %}" class="stack">
+    {% csrf_token %}
+    <label>Username
+      <input type="text" name="username" autocomplete="username" autocapitalize="none" required autofocus>
+    </label>
+    <label>Password
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="button primary">Sign in</button>
+  </form>
+</section>
+{% endblock %}

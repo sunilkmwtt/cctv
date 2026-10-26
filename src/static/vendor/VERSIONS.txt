@@ -1,0 +1,7 @@
+# Vendored, pinned front-end libraries (served locally; no CDN at runtime)
+htmx.org 2.0.8  https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js
+hls.js   1.6.15 https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.light.min.js
+(trailing //# sourceMappingURL comments removed; maps are not shipped)
+
+22283ef68cb7545914f0a88a1bdedc7256a703d1d580c1d255217d0a50d31313  htmx.min.js
+f899a050f2152df13edb67af567e9a8496bc2b62d29fd38372bd251240af19ef  hls.light.min.js

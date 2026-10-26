@@ -1,0 +1,34 @@
+{% load cctv %}
+<div class="hours-head">
+  <h2>{{ selected_date|date:"l, j F Y" }}</h2>
+  <p class="small muted">Hourly slots · click an available hour to play</p>
+</div>
+<ol class="hours-grid">
+  {% for slot in slots %}
+  <li class="hour hour-{{ slot.state }}">
+    {% if slot.items %}
+      {% for item in slot.items %}
+        {% if item.is_playable or item.is_downloadable %}
+          <button type="button" class="hour-button"
+                  hx-get="{% url 'dashboard:player-partial' item.id %}" hx-target="#player">
+            <span class="hour-label">{{ slot.label }}</span>
+            <span class="hour-meta">
+              {% if item.status == 'complete' %}{{ item.duration_seconds|duration }}{% else %}{{ item.get_status_display }}{% endif %}{% if item.source == 'legacy' %} · {{ item.start_time|time:"H:i" }}{% endif %}
+            </span>
+          </button>
+        {% else %}
+          <div class="hour-button disabled" title="{{ item.error_message }}">
+            <span class="hour-label">{{ slot.label }}</span>
+            <span class="hour-meta">{% if item.status == 'recording' %}{% if item.error_message %}Finalizing{% else %}Recording now{% endif %}{% else %}{{ item.get_status_display }}{% endif %}</span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="hour-button disabled">
+        <span class="hour-label">{{ slot.label }}</span>
+        <span class="hour-meta">No video</span>
+      </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>

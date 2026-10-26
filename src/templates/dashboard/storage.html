@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Storage{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Storage</h1></div>
+<section class="card">
+  <h2>Recording disk</h2>
+  {% if storage.total_bytes %}
+  <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ used_percent }}" aria-label="Disk used">
+    <div class="meter-fill{% if used_percent > 90 %} danger{% elif used_percent > 75 %} warn{% endif %}" data-percent="{{ used_percent }}"></div>
+  </div>
+  <p class="small muted">{{ used_percent }}% used</p>
+  {% endif %}
+  <div class="stats">
+    <div class="stat"><span class="stat-label">Total capacity</span><span class="stat-value">{{ storage.total_bytes|filesizeformat }}</span></div>
+    <div class="stat"><span class="stat-label">Used</span><span class="stat-value">{{ storage.used_bytes|filesizeformat }}</span></div>
+    <div class="stat"><span class="stat-label">Available</span><span class="stat-value">{{ storage.available_bytes|filesizeformat }}</span></div>
+  </div>
+</section>
+<section class="card">
+  <h2>CCTV recordings</h2>
+  <div class="stats">
+    <div class="stat"><span class="stat-label">Recording size</span><span class="stat-value">{% if storage.recordings_bytes is not None %}{{ storage.recordings_bytes|filesizeformat }}{% else %}—{% endif %}</span></div>
+    <div class="stat"><span class="stat-label">Recordings</span><span class="stat-value">{{ storage.recording_count }}</span></div>
+    <div class="stat"><span class="stat-label">Days with video</span><span class="stat-value">{{ storage.dates_with_recordings|length }}</span></div>
+  </div>
+  <p class="small muted">Recording size measured {% if storage.recordings_bytes_measured_at %}{{ storage.recordings_bytes_measured_at|timesince }} ago by the indexer{% else %}— indexer has not run yet{% endif %}.</p>
+</section>
+<section class="card">
+  <h2>Dates with recordings</h2>
+  {% if storage.dates_with_recordings %}
+  <ul class="date-chips">
+    {% for day in storage.dates_with_recordings %}
+      <li><a href="{% url 'dashboard:recordings' %}?date={{ day|date:'Y-m-d' }}">{{ day|date:"D j M Y" }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No recordings indexed yet.</p>{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}{% load static %}<script src="{% static 'js/meter.js' %}" defer></script>{% endblock %}

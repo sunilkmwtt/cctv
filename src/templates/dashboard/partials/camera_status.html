@@ -1,0 +1,14 @@
+{% if not status.enabled %}
+  <span class="badge badge-muted">Disabled</span>
+{% elif status.online %}
+  <span class="badge badge-ok" title="{% if status.recorder.active %}Recorder is receiving video{% else %}Live stream is active{% endif %}">Online</span>
+{% else %}
+  <span class="badge badge-bad" title="No recent recorder activity">Offline</span>
+{% endif %}
+{% if status.recorder %}
+  <span class="small muted status-detail">
+    {% if status.recorder.active %}Recording {{ status.recorder.current_slot }}
+    {% elif status.recorder.last_write %}Last write {{ status.recorder.last_write|timesince }} ago
+    {% else %}Not recording{% endif %}
+  </span>
+{% endif %}

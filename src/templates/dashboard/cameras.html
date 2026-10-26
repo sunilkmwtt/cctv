@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Cameras{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Cameras</h1>
+  {% if user.is_staff %}<a class="button" href="{% url 'admin:cameras_camera_changelist' %}">Manage in admin</a>{% endif %}
+</div>
+<div class="camera-list">
+  {% for item in items %}
+  {% with camera=item.camera status=item.status %}
+  <article class="card">
+    <header class="camera-card-head">
+      <div>
+        <h2>{{ camera.name }}</h2>
+        <p class="muted small">{{ camera.location|default:"No location set" }}</p>
+      </div>
+      <div>{% include "dashboard/partials/camera_status.html" %}</div>
+    </header>
+    <dl class="meta-list">
+      <dt>Identifier</dt><dd><code>{{ camera.slug }}</code></dd>
+      <dt>Type</dt><dd>{{ camera.get_camera_type_display }}</dd>
+      <dt>Protocol</dt><dd>{{ camera.get_stream_protocol_display }}</dd>
+      <dt>Enabled</dt><dd>{{ camera.enabled|yesno:"Yes,No" }}</dd>
+      <dt>Live stream</dt><dd>{% if status.live %}{{ status.live.state|capfirst }}{% if status.live.readers %} · {{ status.live.readers }} viewer{{ status.live.readers|pluralize }}{% endif %}{% else %}—{% endif %}</dd>
+      <dt>Recorder</dt><dd>{% if status.recorder.active %}Writing {{ status.recorder.current_slot }}{% elif status.recorder.last_write %}Last write {{ status.recorder.last_write|date:"j M H:i" }}{% else %}No recent activity{% endif %}</dd>
+      <dt>Recordings folder</dt><dd><code>{{ camera.recording_root|default:"(root)" }}</code></dd>
+    </dl>
+    <footer class="camera-card-foot">
+      <a href="{% url 'dashboard:recordings' %}?camera={{ camera.slug }}">Recordings →</a>
+      {% if camera.enabled %}<a href="{% url 'dashboard:live' %}">Live →</a>{% endif %}
+    </footer>
+  </article>
+  {% endwith %}
+  {% empty %}
+  <p class="empty card">No cameras configured.</p>
+  {% endfor %}
+</div>
+{% endblock %}

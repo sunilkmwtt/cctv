@@ -1,0 +1,40 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="htmx-config" content='{"allowEval": false, "includeIndicatorStyles": false, "historyCacheSize": 0}'>
+  <title>{% block title %}Home CCTV{% endblock %} · Home CCTV</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+  <header class="topbar">
+    <a class="brand" href="{% url 'dashboard:live' %}">
+      <span class="brand-dot" aria-hidden="true"></span> Home CCTV
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="{% url 'dashboard:live' %}" {% if nav == 'live' %}aria-current="page"{% endif %}>Live View</a>
+      <a href="{% url 'dashboard:recordings' %}" {% if nav == 'recordings' %}aria-current="page"{% endif %}>Recordings</a>
+      <a href="{% url 'dashboard:cameras' %}" {% if nav == 'cameras' %}aria-current="page"{% endif %}>Cameras</a>
+      <a href="{% url 'dashboard:storage' %}" {% if nav == 'storage' %}aria-current="page"{% endif %}>Storage</a>
+    </nav>
+    <div class="user">
+      {% if user.is_staff %}<a class="muted" href="{% url 'admin:index' %}">Admin</a>{% endif %}
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="link-button">Log out</button>
+      </form>
+    </div>
+  </header>
+{% endif %}
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

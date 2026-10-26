@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Live View{% endblock %}
+{% block head %}<script src="{% static 'vendor/hls.light.min.js' %}" defer></script>
+<script src="{% static 'js/live.js' %}" defer></script>{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Live View</h1>
+</div>
+
+<section class="stats">
+  <div class="stat card">
+    <span class="stat-label">Cameras</span>
+    <span class="stat-value">{{ cameras|length }}</span>
+  </div>
+  <div class="stat card">
+    <span class="stat-label">Recordings today</span>
+    <span class="stat-value">{{ today_count }}</span>
+    <a class="stat-link" href="{% url 'dashboard:recordings' %}">Browse →</a>
+  </div>
+  <div class="stat card">
+    <span class="stat-label">Free storage</span>
+    <span class="stat-value">{{ storage.available_bytes|filesizeformat }}</span>
+    <a class="stat-link" href="{% url 'dashboard:storage' %}">Details →</a>
+  </div>
+</section>
+
+{% if not cameras %}
+  <p class="empty card">No enabled cameras. Add one in the <a href="{% url 'admin:cameras_camera_changelist' %}">admin</a>.</p>
+{% endif %}
+
+<section class="camera-grid">
+  {% for camera in cameras %}
+  <article class="card camera-card">
+    <header class="camera-card-head">
+      <div>
+        <h2>{{ camera.name }}</h2>
+        {% if camera.location %}<p class="muted small">{{ camera.location }}</p>{% endif %}
+      </div>
+      <div class="camera-status" hx-get="{% url 'dashboard:camera-status-partial' camera.id %}" hx-trigger="load, every 20s, refresh" hx-swap="innerHTML">
+        <span class="badge">Checking…</span>
+      </div>
+    </header>
+    <div class="player live-player" data-hls-src="{{ camera.hls_url }}">
+      <video playsinline muted autoplay preload="none" aria-label="Live video from {{ camera.name }}"></video>
+      <div class="player-overlay" data-state="loading">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="overlay-text">Connecting…</span>
+      </div>
+      <div class="player-controls">
+        <button type="button" data-action="play" aria-label="Pause">Pause</button>
+        <button type="button" data-action="mute" aria-label="Unmute">Unmute</button>
+        <span class="live-dot" aria-hidden="true">LIVE</span>
+        <button type="button" data-action="fullscreen" aria-label="Fullscreen">Fullscreen</button>
+      </div>
+    </div>
+    <footer class="camera-card-foot">
+      <a href="{% url 'dashboard:recordings' %}?camera={{ camera.slug }}">Saved recordings →</a>
+    </footer>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

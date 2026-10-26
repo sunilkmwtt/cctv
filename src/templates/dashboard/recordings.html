@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Recordings{% endblock %}
+{% block head %}<script src="{% static 'js/playback.js' %}" defer></script>{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Recordings</h1>
+  {% if cameras|length > 1 %}
+  <nav class="segmented" aria-label="Camera">
+    {% for cam in cameras %}
+      <a href="?camera={{ cam.slug }}&date={{ selected_date|date:'Y-m-d' }}" {% if cam == camera %}aria-current="true"{% endif %}>{{ cam.name }}</a>
+    {% endfor %}
+  </nav>
+  {% elif camera %}
+    <span class="muted">{{ camera.name }}</span>
+  {% endif %}
+</div>
+
+{% if not camera %}
+  <p class="empty card">No cameras configured.</p>
+{% else %}
+<div class="recordings-layout">
+  <aside class="card" id="calendar">
+    {% include "dashboard/partials/calendar.html" %}
+  </aside>
+  <section class="card" id="hours">
+    {% include "dashboard/partials/hours.html" %}
+  </section>
+</div>
+<section id="player" class="card player-panel" aria-live="polite">
+  <p class="muted">Select an hour with a recording to play it.</p>
+</section>
+{% endif %}
+{% endblock %}

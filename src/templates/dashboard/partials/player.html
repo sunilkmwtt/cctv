@@ -1,0 +1,27 @@
+{% load cctv %}
+<div class="player-head">
+  <div>
+    <h2>{{ recording.camera.name }} · {{ recording.recording_date|date:"j M Y" }} · {{ recording.slot_label }}</h2>
+    <p class="small muted">
+      {% if recording.start_time %}≈ {{ recording.start_time|time:"H:i:s" }}{% if recording.end_time %} – {{ recording.end_time|time:"H:i:s" }}{% endif %} · {% endif %}
+      {{ recording.duration_seconds|duration }} · {{ recording.file_size_bytes|filesizeformat }}
+      {% if recording.video_codec %} · {{ recording.video_codec|upper }}{% if recording.audio_codec %}/{{ recording.audio_codec|upper }}{% endif %}{% endif %}
+      {% if recording.source == 'legacy' %} · legacy file{% endif %}
+    </p>
+  </div>
+  {% if recording.is_downloadable %}
+    <a class="button" href="{% url 'recording-download' recording.id %}" download>Download original</a>
+  {% endif %}
+</div>
+{% if recording.is_playable %}
+  <div class="player recording-player" data-play-url="{% url 'recording-play' recording.id %}">
+    <video controls playsinline preload="metadata" aria-label="Recording playback"></video>
+    <div class="player-overlay" data-state="loading">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="overlay-text">Preparing video…</span>
+    </div>
+  </div>
+{% else %}
+  <p class="alert">This recording cannot be played in the browser: {{ recording.error_message|default:recording.get_status_display }}.
+  {% if recording.is_downloadable %}You can still download the original file.{% endif %}</p>
+{% endif %}

@@ -1,0 +1,30 @@
+{% url 'dashboard:calendar-partial' as calendar_url %}
+<div class="calendar">
+  <div class="calendar-head">
+    <button type="button" class="icon-button" aria-label="Previous month"
+            hx-get="{{ calendar_url }}?camera={{ camera.slug }}&month={{ prev_month|date:'Y-m' }}&date={{ selected_date|date:'Y-m-d' }}"
+            hx-target="#calendar">‹</button>
+    <h2>{{ month|date:"F Y" }}</h2>
+    <button type="button" class="icon-button" aria-label="Next month"
+            hx-get="{{ calendar_url }}?camera={{ camera.slug }}&month={{ next_month|date:'Y-m' }}&date={{ selected_date|date:'Y-m-d' }}"
+            hx-target="#calendar">›</button>
+  </div>
+  <table class="calendar-grid">
+    <thead><tr>{% for name in weekday_names %}<th scope="col">{{ name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for week in weeks %}
+      <tr>
+      {% for day in week %}
+        <td>
+          <a href="?camera={{ camera.slug }}&date={{ day.date|date:'Y-m-d' }}"
+             class="day{% if not day.in_month %} outside{% endif %}{% if day.info %} has-recordings{% endif %}{% if day.selected %} selected{% endif %}{% if day.today %} today{% endif %}"
+             {% if day.info %}title="{{ day.info.complete }} complete{% if day.info.recording %}, {{ day.info.recording }} in progress{% endif %}{% if day.info.corrupt %}, {{ day.info.corrupt }} damaged{% endif %}"{% endif %}
+             {% if day.selected %}aria-current="date"{% endif %}>{{ day.date.day }}</a>
+        </td>
+      {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="legend small muted"><span class="legend-dot has"></span> has recordings</p>
+</div>
