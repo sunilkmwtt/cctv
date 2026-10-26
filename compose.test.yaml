@@ -1,0 +1,38 @@
+# Test runner: throwaway PostgreSQL on tmpfs + the test image. Never touches real recordings.
+#   docker compose -f compose.test.yaml run --rm tests
+name: home-cctv-test
+
+services:
+  test-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cctv_test
+      POSTGRES_USER: cctv
+      POSTGRES_PASSWORD: test-only-password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cctv -d cctv_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  tests:
+    build:
+      context: .
+      target: test
+    environment:
+      DJANGO_SECRET_KEY: test-only-secret-key
+      DJANGO_DEBUG: "0"
+      POSTGRES_DB: cctv_test
+      POSTGRES_USER: cctv
+      POSTGRES_PASSWORD: test-only-password
+      POSTGRES_HOST: test-db
+      CCTV_RECORDINGS_ROOT: /tmp/does-not-exist
+      CCTV_PLAYBACK_CACHE_DIR: /tmp/does-not-exist-cache
+      CCTV_MEDIAMTX_API_URL: http://127.0.0.1:9
+      CCTV_FIELD_ENCRYPTION_KEY: dGVzdC1vbmx5LWZlcm5ldC1rZXktMzItYnl0ZXMhISE=
+    depends_on:
+      test-db: { condition: service_healthy }
+    tmpfs:
+      - /tmp:size=512m,uid=1000,gid=1000

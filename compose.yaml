@@ -1,0 +1,193 @@
+# Home CCTV - production stack.
+#   cp .env.example .env   (fill in)      cp secrets/mediamtx.env.example secrets/mediamtx.env (fill in)
+#   docker compose up -d --build
+#
+# The host recorder (cctv.service) is NOT part of this stack and keeps running independently.
+# `docker compose down` keeps the database volume; only `down -v` would delete it.
+
+name: home-cctv
+
+x-app: &app
+  build:
+    context: .
+    target: runtime
+    args:
+      APP_UID: ${APP_UID:-1000}
+      APP_GID: ${APP_GID:-1000}
+  image: home-cctv-web:latest
+  env_file: .env
+  environment:
+    CCTV_RECORDINGS_ROOT: /app/recordings
+    CCTV_PLAYBACK_CACHE_DIR: /app/cache/playback
+    CCTV_USE_X_ACCEL: "1"
+    CCTV_MEDIAMTX_API_URL: http://mediamtx:9997
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      TZ: ${TZ:-Asia/Kolkata}
+      PGTZ: ${TZ:-Asia/Kolkata}
+    # Small-footprint tuning for a 4 GB laptop.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - effective_cache_size=256MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    shm_size: 64m
+    deploy:
+      resources:
+        limits: { cpus: "0.75", memory: 256M }
+    logging: *logging
+
+  # One-shot: applies migrations under an advisory lock, then exits.
+  migrate:
+    <<: *app
+    command: ["python", "manage.py", "migrate_safe"]
+    restart: "no"
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [backend]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 256M }
+
+  web:
+    <<: *app
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    volumes:
+      - ${CCTV_HOST_RECORDINGS_DIR:?set CCTV_HOST_RECORDINGS_DIR in .env}:/app/recordings:ro
+      - playback_cache:/app/cache
+    networks: [backend, frontend]
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 512M }
+
+  # Periodic, idempotent recording indexer (single process, sleeps between passes).
+  indexer:
+    <<: *app
+    restart: unless-stopped
+    command: ["python", "manage.py", "sync_recordings", "--loop", "--interval", "${CCTV_SYNC_INTERVAL:-300}"]
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    volumes:
+      - ${CCTV_HOST_RECORDINGS_DIR:?set CCTV_HOST_RECORDINGS_DIR in .env}:/app/recordings:ro
+    networks: [backend]
+    healthcheck:
+      # Healthy when a sync pass finished within the last 3 intervals.
+      test: ["CMD", "python", "-c", "import os,sys,time; p='/tmp/indexer-heartbeat'; sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p) < 3*int(os.environ.get('CCTV_SYNC_INTERVAL','300'))+120 else 1)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 15m
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 192M }
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.3
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/mediamtx.env
+        required: true
+    environment:
+      TZ: ${TZ:-Asia/Kolkata}
+    volumes:
+      - ./docker/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+    # RTSP re-stream for local testing / a future recorder switch. Localhost only.
+    ports:
+      - "127.0.0.1:${MEDIAMTX_RTSP_HOST_PORT:-8554}:8554"
+    networks: [frontend]
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    deploy:
+      resources:
+        limits: { cpus: "0.75", memory: 192M }
+    logging: *logging
+
+  proxy:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    user: "101:101"
+    depends_on:
+      web: { condition: service_healthy }
+    ports:
+      - "${CCTV_HTTP_BIND:-0.0.0.0}:${CCTV_HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${CCTV_HOST_RECORDINGS_DIR:?set CCTV_HOST_RECORDINGS_DIR in .env}:/srv/recordings:ro
+      - playback_cache:/srv/cache:ro
+    command: ["nginx", "-g", "daemon off;"]
+    networks: [frontend]
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 64M }
+    logging: *logging
+
+networks:
+  # Database network: no route to the outside world.
+  backend:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${CCTV_BACKEND_SUBNET:-10.89.1.0/24}
+  # Proxy/web/MediaMTX. MediaMTX reaches the camera on the LAN through Docker NAT.
+  frontend:
+    ipam:
+      config:
+        - subnet: ${CCTV_FRONTEND_SUBNET:-10.89.2.0/24}
+
+volumes:
+  pgdata:
+    name: home-cctv-pgdata
+  playback_cache:
+    name: home-cctv-playback-cache
